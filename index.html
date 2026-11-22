@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gimnasio del Negociador</title>
+<meta name="description" content="Teoría de juegos para negociar con proveedores de Pavez Economat: aprende, practica contra el reloj y mantén la racha.">
+<meta name="theme-color" content="#1D5A42">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./assets/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: una sola columna tipo app móvil; tablero de obra (verde aserradero + amarillo seguridad) */
+:root{
+  --bg:#EEF2EE; --surface:#FFFFFF; --ink:#14201A; --muted:#56665D; --line:#D3DCD6;
+  --brand:#1D5A42; --brand-ink:#FFFFFF; --accent:#F2B705; --accent-ink:#1A1400;
+  --ok:#1C8550; --ok-bg:#E2F3E9; --bad:#BE3D29; --bad-bg:#FBE7E2; --warn-bg:#FFF4CC;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1612; --surface:#17221D; --ink:#E6EEE9; --muted:#97A99F; --line:#2A3A32;
+  --brand:#5DBE91; --brand-ink:#08130E; --accent:#F5C12E; --accent-ink:#1A1400;
+  --ok:#4CC488; --ok-bg:#15301F; --bad:#F06A53; --bad-bg:#371812; --warn-bg:#3A3110; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1612; --surface:#17221D; --ink:#E6EEE9; --muted:#97A99F; --line:#2A3A32;
+  --brand:#5DBE91; --brand-ink:#08130E; --accent:#F5C12E; --accent-ink:#1A1400;
+  --ok:#4CC488; --ok-bg:#15301F; --bad:#F06A53; --bad-bg:#371812; --warn-bg:#3A3110; color-scheme:dark}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+.app{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--display);font-stretch:85%;line-height:1.1;margin:0;text-wrap:balance}
+h1{font-size:2rem;font-weight:900;letter-spacing:-.01em}
+h2{font-size:1.5rem;font-weight:800}
+h3{font-size:1.1rem;font-weight:800}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn{border:0;border-radius:12px;padding:14px 18px;font-weight:700;font-size:1rem;background:var(--brand);color:var(--brand-ink);width:100%}
+.btn.alt{background:transparent;border:2px solid var(--line);color:var(--ink)}
+.btn.go{background:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:10px}
+.row>*{flex:1;min-width:0}
+
+/* Encabezado */
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.stat .num{font-size:1.5rem}
+.stat.fire .num{color:var(--bad)}
+.alert{border-radius:14px;padding:14px 16px;background:var(--warn-bg);border:2px solid var(--accent);display:flex;flex-direction:column;gap:6px}
+.alert.hot{background:var(--bad-bg);border-color:var(--bad)}
+.alert strong{font-family:var(--display);font-stretch:85%;font-size:1.15rem}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.7rem;color:var(--muted)}
+.dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:.8rem;font-weight:700}
+.dot.done{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.dot.today{border-color:var(--accent)}
+
+/* Lista de módulos */
+.mods{display:flex;flex-direction:column;gap:10px}
+.mod{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;text-align:left;width:100%;
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.mod .n{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-family:var(--display);font-weight:900;font-size:1.3rem;background:var(--bg);border:2px solid var(--line)}
+.mod.passed .n{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.mod.next .n{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.mod.locked{opacity:.5;cursor:default}
+.mod .meta{font-size:.82rem;color:var(--muted)}
+.mod .tag{font-family:var(--mono);font-size:.75rem;font-weight:700;white-space:nowrap}
+
+/* Lección */
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--brand);transition:width .3s}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.card p,.card li{max-width:65ch}
+.card ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.kicker{display:inline-block;align-self:flex-start;font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;border-radius:6px;background:var(--accent);color:var(--accent-ink)}
+.ex{border-left:4px solid var(--accent);padding:10px 12px;background:var(--bg);border-radius:0 10px 10px 0;font-size:.95rem}
+.rule{font-family:var(--display);font-stretch:85%;font-weight:800;font-size:1.2rem;color:var(--brand)}
+.tablewrap{overflow-x:auto}
+table.m{border-collapse:collapse;width:100%;font-size:.88rem}
+table.m th,table.m td{border:1px solid var(--line);padding:8px;text-align:center}
+table.m th{background:var(--bg);font-weight:600}
+table.m td.eq{background:var(--ok-bg);font-weight:700}
+.zopa{position:relative;height:56px;margin:8px 0 4px}
+.zopa .track{position:absolute;left:0;right:0;top:22px;height:12px;border-radius:6px;background:var(--line)}
+.zopa .zone{position:absolute;top:22px;height:12px;background:var(--ok);border-radius:6px}
+.zopa .mk{position:absolute;top:0;font-family:var(--mono);font-size:.7rem;transform:translateX(-50%);white-space:nowrap}
+.zopa .mk.b{top:38px}
+.speak{align-self:flex-start;background:transparent;border:2px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.85rem;font-weight:600}
+.speak.on{border-color:var(--accent);background:var(--warn-bg)}
+
+/* Práctica */
+.timer{display:flex;align-items:center;gap:10px}
+.timer .bar{flex:1;height:10px;border-radius:5px}
+.timer .bar>i{background:var(--accent);transition:width 1s linear}
+.timer .bar.low>i{background:var(--bad)}
+.case{font-size:1.02rem}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{text-align:left;background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.opt b{font-family:var(--mono);width:28px;height:28px;border-radius:8px;background:var(--bg);display:grid;place-items:center}
+.opt.right{border-color:var(--ok);background:var(--ok-bg)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.opt:disabled{cursor:default;color:var(--ink)}
+.why{font-size:.88rem;color:var(--muted);grid-column:2}
+.fb{border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.fb.ok{background:var(--ok-bg);border:2px solid var(--ok)}
+.fb.no{background:var(--bad-bg);border:2px solid var(--bad)}
+.fb .pts{font-family:var(--mono);font-weight:700}
+
+/* Resultado */
+.big{font-family:var(--display);font-stretch:75%;font-weight:900;font-size:4rem;line-height:1;color:var(--brand)}
+.mission{border:2px dashed var(--accent);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.small{font-size:.82rem;color:var(--muted)}
+.sync{font-size:.75rem;color:var(--muted);text-align:center}
+.tools{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:16px}
+.tools .row .btn{padding:10px 12px;font-size:.9rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<input type="file" id="restore" accept="application/json,.json" hidden>
+
+<script>
+/* ============ CONTENIDO DEL CURSO ============ */
+const MODS = [
+{id:"m1",n:1,title:"El tablero",sub:"Jugadores, jugadas y pagos",
+ lesson:[
+  {k:"La idea",h:"Negociar es un juego de dos",b:`<p>En una negociación el resultado no depende solo de lo que haces tú. Depende también de lo que hace el otro. La teoría de juegos es la disciplina de <strong>pensar tu jugada anticipando la jugada del otro</strong>, como en el ajedrez.</p><p>Todo juego tiene cuatro piezas: <strong>jugadores</strong>, <strong>estrategias</strong> (lo que cada uno puede hacer), <strong>información</strong> (lo que cada uno sabe) y <strong>pagos</strong> (lo que cada uno gana o pierde).</p>`},
+  {k:"Las piezas en Pavez Economat",h:"Tu tablero real",b:`<ul><li><strong>Jugadores:</strong> Pavez Economat, el aserradero o distribuidor, y también los otros proveedores que te cotizan.</li><li><strong>Estrategias:</strong> precio, volumen, plazo de pago, despacho, exclusividad, frecuencia de pedido.</li><li><strong>Información:</strong> él sabe su costo; tú sabes tu stock, tu urgencia y tu alternativa.</li><li><strong>Pagos:</strong> margen, flujo de caja, continuidad de abastecimiento, flete.</li></ul><div class="ex">Si solo miras el precio, estás jugando con una pieza de cuatro.</div>`},
+  {k:"Herramienta: la matriz",h:"Mira el juego desde arriba",b:`<p>Una matriz de pagos pone tus opciones en filas y las del proveedor en columnas. Cada casilla dice cuánto gana cada uno (<span class="num">tú, él</span>).</p><div class="tablewrap"><table class="m"><tr><th></th><th>Él da 5%</th><th>Él mantiene lista</th></tr><tr><th>Tú comprometes volumen</th><td class="eq">8 , 7</td><td>3 , 6</td></tr><tr><th>Tú compras suelto</th><td>6 , 3</td><td class="eq">4 , 4</td></tr></table></div><p>Las casillas verdes son <strong>equilibrios</strong>: puntos donde ninguno mejora cambiando solo su jugada. Hay uno bueno (8,7) y uno mediocre (4,4). Si tú <strong>mueves primero</strong> ofreciendo volumen a cambio del descuento, llevas el juego a la casilla buena para los dos.</p>`},
+  {k:"Ejemplo",h:"La llamada al proveedor de OSB",b:`<p>Antes de llamar, Arturo anota qué quiere el proveedor: vender volumen estable, cobrar rápido y despachar camión completo para llenar flete.</p><div class="ex">Propuesta: “Te compro camión completo cada mes y te pago a 15 días. A cambio necesito un 6% bajo lista.” Le das lo que a él le vale mucho y a ti te cuesta poco.</div><p>No pidió un descuento a secas: armó una jugada que al proveedor le conviene aceptar.</p>`},
+  {k:"Error típico y regla",h:"No negocies solo desde tu silla",b:`<p>El error más común es entrar pensando solo en tu precio. Así reaccionas a lo que el otro hace, en vez de anticiparlo.</p><p class="rule">Mapa del otro: ¿qué gana?, ¿qué teme?, ¿qué hará si le digo esto?</p><p>Contesta esas tres preguntas antes de cada negociación. Toma dos minutos.</p>`}
+ ],
+ summary:["Una negociación tiene jugadores, estrategias, información y pagos.","La matriz muestra dónde puede terminar el juego.","Mover primero con una oferta condicionada lleva al equilibrio bueno.","Antes de negociar: qué gana, qué teme y qué hará el otro."],
+ mission:"Elige tu proveedor más importante de madera y escribe en tres líneas: qué gana él contigo, qué teme perder y qué haría si le pides 5% menos.",
+ qs:[
+  {c:"Tu proveedor de pino te ofrece 4% de descuento si compras camión completo cada mes. Tu bodega lo aguanta. ¿Cuál es tu primer paso?",o:[
+   {t:"Aceptar al tiro, 4% es buen descuento.",ok:0,w:"Aceptas sin saber cuánto vale para él el camión completo. Puede que estés dejando plata sobre la mesa."},
+   {t:"Averiguar qué le ahorra a él el camión completo (flete, planificación) antes de responder.",ok:1,w:"Correcto. Si sabes cuánto gana él, sabes cuánto más puedes pedir: un 6%, o el 4% más plazo de pago."},
+   {t:"Rechazar, porque 4% es poco.",ok:0,w:"Rechazar sin contrapropuesta cierra el juego. La oferta muestra que a él le interesa el camión completo: úsalo."}]},
+  {c:"Según la matriz: si comprometes volumen, al proveedor le conviene darte 5%. Si compras suelto, le conviene mantener lista. ¿Qué haces?",o:[
+   {t:"Esperar a que él baje el precio primero.",ok:0,w:"Si esperas, lo más probable es que ambos se queden en la casilla mediocre (4,4)."},
+   {t:"Mover primero: proponer el compromiso de volumen condicionado al 5%.",ok:1,w:"Exacto. Tu jugada condicionada le deja como mejor respuesta darte el descuento. Llegan a (8,7)."},
+   {t:"Comprometer volumen sin pedir nada a cambio.",ok:0,w:"Si comprometes sin condición, él puede quedarse en lista y tú pierdes (3,6)."}]},
+  {c:"Vas a renegociar el precio del cemento. ¿Quiénes son los jugadores de este juego?",o:[
+   {t:"Solo tú y el distribuidor.",ok:0,w:"Te faltan piezas. Los demás que cotizan o compran también mueven el resultado."},
+   {t:"Tú, el distribuidor, los otros distribuidores que te cotizan y la competencia que también le compra.",ok:1,w:"Correcto. Tus alternativas te dan poder; los otros clientes de él le dan poder a él."},
+   {t:"Solo el vendedor que te atiende.",ok:0,w:"El vendedor es la cara, pero el juego lo deciden la empresa y sus alternativas."}]}
+ ]},
+{id:"m2",n:2,title:"Tu plan B",sub:"Alternativa, precio de reserva y ZOPA",
+ lesson:[
+  {k:"La idea",h:"Manda el que tiene mejor alternativa",b:`<p>Tu <strong>plan B</strong> (en los libros se llama BATNA: mejor alternativa a un acuerdo negociado) es lo que harás si no hay acuerdo. No manda el que grita más, manda el que <strong>puede irse</strong> con menos costo.</p><p>Y vale para los dos lados: si el proveedor pierde mucho sin ti, su plan B es malo y tú tienes más poder del que crees.</p>`},
+  {k:"Herramienta",h:"Calcula tu precio de reserva",b:`<p>El <strong>precio de reserva</strong> es lo máximo que pagarás. Sale de tu plan B: precio de la alternativa + costos de cambiarte.</p><div class="ex">Pino 2x4 hoy: <span class="num">$10.000</span>. Alternativa: <span class="num">$10.300</span>, pero despacha más lento y eso te cuesta unos <span class="num">$150</span> por unidad en quiebres.<br>Precio de reserva = <span class="num">$10.450</span>. Si piden más, te vas.</div><p>Defínelo <strong>antes</strong> de sentarte. Si no lo defines tú, lo define el otro.</p>`},
+  {k:"Herramienta: ZOPA",h:"La zona donde hay trato",b:`<p>La <strong>ZOPA</strong> es la zona entre lo mínimo que acepta el proveedor y lo máximo que pagas tú. Si existe, hay trato posible. La negociación decide <strong>dónde</strong> caes dentro de ella.</p><div class="zopa" aria-label="Zona de acuerdo entre 9.400 y 10.450"><div class="track"></div><div class="zone" style="left:20%;width:55%"></div><span class="mk" style="left:20%">mín. él $9.400</span><span class="mk" style="left:75%">máx. tú $10.450</span><span class="mk b" style="left:47.5%">acá se pelea</span></div><p>Cada peso que logras acercar al mínimo de él es margen para Pavez Economat.</p>`},
+  {k:"Ejemplo",h:"El alza del 8%",b:`<p>Tu proveedor de pino avisa un alza de 8%. Tienes una cotización de otro proveedor 3% más cara que tu precio actual, con despacho más lento.</p><div class="ex">Tu reserva ronda +3% más el costo del despacho lento. Le muestras la cotización y ofreces quedarte con +2%. Él sabe que perder a un cliente grande en Rancagua le duele: su plan B también es malo.</div>`},
+  {k:"Error típico y regla",h:"Mejora tu plan B antes, no durante",b:`<p>El error: llegar sin alternativa cotizada. Ahí aceptas lo que venga, porque no tienes adónde ir.</p><p class="rule">Regla de las dos cotizaciones vivas: siempre al menos dos proveedores cotizados por familia de producto.</p><p>Tu herramienta de reposición con el histórico de costos te da el dato para saber si un precio es razonable.</p>`}
+ ],
+ summary:["Tu poder depende de tu plan B, y del plan B del otro.","Precio de reserva = alternativa + costo de cambiarte.","La ZOPA es donde hay trato; la negociación decide dónde caes.","Mejora tu alternativa antes de negociar."],
+ mission:"Para tus tres productos de mayor rotación, anota: proveedor actual, alternativa cotizada y precio de reserva.",
+ qs:[
+  {c:"Tu proveedor de pino sube 8% desde el lunes. Tienes una cotización de otro 3% más cara que tu precio actual, pero que despacha más lento. ¿Qué haces?",o:[
+   {t:"Aceptar el alza para no complicarte.",ok:0,w:"Pagas 8% teniendo una alternativa a ~3%. Regalas casi 5 puntos de margen."},
+   {t:"Mostrar la otra cotización y ofrecer quedarte si sube 3% o menos.",ok:1,w:"Bien jugado. Usas tu plan B como palanca sin quemar la relación."},
+   {t:"Cambiarte al tiro al otro proveedor.",ok:0,w:"Te cambias sin negociar y asumes el despacho lento. Perdiste la oportunidad de usar la alternativa como palanca."}]},
+  {c:"La plancha de OSB te cuesta $12.000. La alternativa cobra $12.200 y te suma $100 por plancha en flete. ¿Cuál es tu precio de reserva?",o:[
+   {t:"$12.000",ok:0,w:"Ese es tu precio actual, no tu límite. Podrías pagar algo más antes de que te convenga cambiarte."},
+   {t:"$12.200",ok:0,w:"Te faltó sumar el costo de cambiarte: el flete extra."},
+   {t:"$12.300",ok:1,w:"Exacto: $12.200 + $100 de flete. Sobre $12.300 te conviene la alternativa."}]},
+  {c:"¿Cuándo conviene mejorar tu plan B?",o:[
+   {t:"Durante la negociación, amenazando con irte.",ok:0,w:"Una amenaza sin alternativa real no es creíble, y el otro lo nota."},
+   {t:"Antes, cotizando y validando la alternativa.",ok:1,w:"Correcto. El poder se construye antes de sentarse a la mesa."},
+   {t:"No importa si tienes buena relación con el proveedor.",ok:0,w:"La buena relación ayuda, pero sin plan B dependes de su buena voluntad."}]}
+ ]},
+{id:"m3",n:3,title:"El juego repetido",sub:"Dilema del prisionero y reputación",
+ lesson:[
+  {k:"La idea",h:"El dilema del prisionero",b:`<p>Dos jugadores pueden cooperar o traicionar. Si cooperan los dos, ganan bien. Si uno traiciona, ese gana más esa vez. Si traicionan los dos, pierden ambos.</p><div class="tablewrap"><table class="m"><tr><th></th><th>Él coopera</th><th>Él traiciona</th></tr><tr><th>Tú cooperas</th><td>3 , 3</td><td>0 , 5</td></tr><tr><th>Tú traicionas</th><td>5 , 0</td><td class="eq">1 , 1</td></tr></table></div><p>Jugado una sola vez, los dos terminan traicionando y sacan 1. Mal negocio.</p>`},
+  {k:"Herramienta",h:"La sombra del futuro",b:`<p>Cuando el juego se repite, todo cambia. Lo que ganas hoy apretando de más lo pierdes en las rondas siguientes.</p><div class="ex">Cooperar 5 meses: <span class="num">3+3+3+3+3 = 15</span><br>Traicionar el primer mes y que te paguen con la misma moneda: <span class="num">5+1+1+1+1 = 9</span></div><p>Con un proveedor de años, la relación vale más que el descuento de un mes.</p>`},
+  {k:"Herramienta",h:"Ojo por ojo, con perdón",b:`<p>En un famoso torneo de estrategias (Robert Axelrod, 1980), ganó la más simple:</p><ul><li><strong>Empieza cooperando.</strong></li><li><strong>Si el otro te falla, responde</strong> con firmeza y en proporción.</li><li><strong>Si corrige, vuelve a cooperar.</strong></li></ul><p>El perdón evita guerras eternas por un malentendido.</p>`},
+  {k:"Ejemplo",h:"El aserradero que atrasa",b:`<p>Tu aserradero atrasa el despacho dos veces sin avisar.</p><div class="ex">Arturo conversa claro, y mueve un pedido a la alternativa: castigo proporcional. Le dice que el volumen vuelve cuando cumplan. Al mes siguiente despachan a tiempo y el volumen vuelve.</div>`},
+  {k:"Error típico y regla",h:"No trates a todos igual",b:`<p>El error: negociar igual con el proveedor de 10 años que con el importador que ves una vez.</p><p class="rule">Estratégicos: juego repetido, cuida la relación. Transaccionales: compra puntual, negocia duro.</p>`}
+ ],
+ summary:["En una sola jugada conviene apretar; en el juego repetido conviene cooperar.","La sombra del futuro hace que la reputación valga plata.","Ojo por ojo con perdón: coopera, responde, perdona.","Separa proveedores estratégicos y transaccionales."],
+ mission:"Clasifica tus diez proveedores principales en estratégicos y transaccionales. Anota con cuál de ellos estás negociando mal.",
+ qs:[
+  {c:"Un proveedor de hace años se equivoca en una factura a su favor por primera vez.",o:[
+   {t:"Cortar la relación: no se puede confiar.",ok:0,w:"Castigo desproporcionado. Pierdes un proveedor estratégico por un error."},
+   {t:"Reclamar firme, pedir la corrección y seguir cooperando si corrige.",ok:1,w:"Ojo por ojo con perdón: respondes, pero dejas la puerta abierta."},
+   {t:"No decir nada para cuidar la relación.",ok:0,w:"Si no respondes, enseñas que fallarte no tiene costo."}]},
+  {c:"Un importador ofrece una partida de cerámica en liquidación. Es una compra única: no lo volverás a ver.",o:[
+   {t:"Negociar duro el precio.",ok:1,w:"Correcto. Es un juego de una sola vez: no hay relación futura que cuidar."},
+   {t:"Cuidar la relación y pagar lo que pide.",ok:0,w:"No hay rondas futuras. Pagar de más no te compra nada."},
+   {t:"Ofrecerle un contrato anual.",ok:0,w:"Está liquidando, no busca relación. Y tú no necesitas comprometerte."}]},
+  {c:"Un proveedor estratégico te sube el precio sin aviso por segunda vez y no explica nada.",o:[
+   {t:"Ignorarlo, es estratégico.",ok:0,w:"Si no respondes, la tercera vez será igual."},
+   {t:"Mover parte del volumen a la alternativa y avisar que vuelve si respeta lo acordado.",ok:1,w:"Respuesta proporcional y con salida. Así funciona ojo por ojo con perdón."},
+   {t:"Cortarle todas las compras.",ok:0,w:"Castigo total: pierdes la relación y quedas dependiendo de otro."}]}
+ ]},
+{id:"m4",n:4,title:"Información y señales",sub:"Qué mostrar, qué guardar, cómo anclar",
+ lesson:[
+  {k:"La idea",h:"Quien sabe más, negocia mejor",b:`<p>Casi siempre hay <strong>información asimétrica</strong>: el proveedor conoce su costo; tú conoces tu stock, tu urgencia y tu alternativa.</p><p>Tu trabajo: <strong>proteger tu información y descubrir la suya</strong>.</p>`},
+  {k:"Herramienta",h:"Qué guardar y qué mostrar",b:`<ul><li><strong>Guarda:</strong> tu precio de reserva, tu urgencia, tu stock bajo.</li><li><strong>Muestra:</strong> la cotización real de la competencia, tu volumen proyectado, tu historial de pago puntual.</li></ul><div class="ex">“Me quedan dos días de stock” es la frase más cara que puede decir un comprador.</div>`},
+  {k:"Herramienta",h:"Señales creíbles",b:`<p>Una señal vale cuando es <strong>difícil de fingir</strong>. Decir “me sale más barato en otro lado” no vale nada. Mostrar la cotización con fecha y timbre, sí.</p><p>Una amenaza solo sirve si es creíble: si no estás dispuesto a cumplirla, no la digas.</p>`},
+  {k:"Herramienta",h:"El ancla",b:`<p>El primer número arrastra toda la conversación. Si tienes buena información de mercado, <strong>ancla tú</strong>: ambicioso pero defendible.</p><div class="ex">Te dicen +10%. Tú sabes que el mercado subió 4%. No partes desde su 10%: “El mercado subió 4%, nuestra propuesta es 3%”.</div><p>Si ancla él, no negocies desde su número: re-ancla con tu dato.</p>`},
+  {k:"Error típico y regla",h:"Pregunta más, cuenta menos",b:`<p>Para descubrir: “¿Cómo está su costo de flete?”, “¿Cómo anda su stock este mes?”, “¿Qué volumen les acomoda?”.</p><p class="rule">El que más pregunta, más sabe. El que más cuenta, más regala.</p>`}
+ ],
+ summary:["Protege tu reserva y tu urgencia; descubre su costo y su urgencia.","Una señal vale si es difícil de fingir.","Ancla primero cuando tengas datos; si ancla él, re-ancla.","Pregunta más de lo que cuentas."],
+ mission:"Para tu próxima negociación escribe: qué información muestro, cuál guardo, cuál es mi ancla y con qué dato la defiendo.",
+ qs:[
+  {c:"El vendedor te pregunta: “¿Cómo andas de stock de pino 2x4?”. Te quedan tres días.",o:[
+   {t:"“Justo, nos quedan tres días.”",ok:0,w:"Acabas de decirle que no puedes irte. Tu poder se fue al suelo."},
+   {t:"“Estamos planificando el mes, por eso estoy cotizando con varios.”",ok:1,w:"Neutral y verdadero. No revelas urgencia y le recuerdas que tienes alternativas."},
+   {t:"“Tenemos de sobra.”",ok:0,w:"Mentir te puede pillar después y daña la confianza en un juego repetido."}]},
+  {c:"¿Cuál es la señal más creíble para pedir un mejor precio?",o:[
+   {t:"Decir que otro te ofrece 5% menos.",ok:0,w:"Cualquiera puede decirlo. No cuesta nada fingirlo."},
+   {t:"Mostrar la cotización formal con fecha.",ok:1,w:"Es difícil de fingir, por eso convence."},
+   {t:"Amenazar con no comprarle más.",ok:0,w:"Si no la vas a cumplir, la amenaza te resta credibilidad."}]},
+  {c:"El proveedor abre: “El alza es 10%”. Tú sabes que el mercado subió 4%.",o:[
+   {t:"Partir la diferencia: 7%.",ok:0,w:"Dividir desde su ancla es aceptar su número como punto de partida."},
+   {t:"Re-anclar con tu dato: “El mercado subió 4%, proponemos 3%”.",ok:1,w:"Correcto. Cambias el centro de la negociación a un número defendible."},
+   {t:"Aceptar el 10% para no pelear.",ok:0,w:"Pagas 6 puntos sobre el mercado."}]}
+ ]},
+{id:"m5",n:5,title:"Agrandar la torta",sub:"Intercambiar variables para que ambos ganen",
+ lesson:[
+  {k:"La idea",h:"Solo precio es una guerra",b:`<p>Si negocias solo precio, es <strong>suma cero</strong>: lo que gana uno lo pierde el otro. Cuando sumas variables (plazo, despacho, volumen, precio congelado) aparecen intercambios donde <strong>ganan los dos</strong>.</p>`},
+  {k:"Herramienta",h:"Cada variable vale distinto para cada uno",b:`<div class="tablewrap"><table class="m"><tr><th>Variable</th><th>A ti te cuesta</th><th>A él le vale</th></tr><tr><td>Pago a 15 días</td><td>Poco (si hay caja)</td><td>Mucho</td></tr><tr><td>Pedido fijo programado</td><td>Poco</td><td>Mucho (planifica, llena flete)</td></tr><tr><td>Precio congelado 3 meses</td><td>Vale mucho para ti</td><td>Poco si tiene stock</td></tr></table></div><p>Das lo que te cuesta poco y pides lo que le cuesta poco a él.</p>`},
+  {k:"Herramienta",h:"Si yo te doy, tú me das",b:`<p class="rule">Nunca cedas gratis: “Si yo te doy X, ¿tú me das Y?”</p><p>Ceder sin pedir nada le enseña al otro que pedir funciona. Y lo cedido gratis no se valora.</p>`},
+  {k:"Ejemplo",h:"El proveedor de terciado que no baja",b:`<p>El proveedor dice que el precio no se mueve.</p><div class="ex">Arturo propone: pago a 15 días + pedido fijo quincenal, a cambio de 4% y despacho gratis. El proveedor ahorra cobranza y planifica producción. Pavez Economat gana margen.</div>`},
+  {k:"Error típico y regla",h:"Negocia el paquete",b:`<p>El error: ir punto por punto (primero precio, después plazo, después despacho). Así no puedes intercambiar.</p><p class="rule">Pon todo sobre la mesa y negocia el paquete completo.</p>`}
+ ],
+ summary:["Sumar variables convierte una guerra en un intercambio.","Da lo que te cuesta poco; pide lo que a él le cuesta poco.","Si yo te doy, tú me das: nunca cedas gratis.","Negocia el paquete, no punto por punto."],
+ mission:"Lista cinco cosas que a Pavez Economat le cuestan poco y que valen mucho para tu proveedor principal, y cinco al revés.",
+ qs:[
+  {c:"El proveedor dice: “El precio no lo puedo bajar”.",o:[
+   {t:"Insistir con el precio hasta que ceda.",ok:0,w:"Te quedas en la guerra de suma cero, y se tensa la relación."},
+   {t:"Abrir otras variables: plazo, despacho, precio congelado.",ok:1,w:"Correcto. Si el precio está trabado, agranda la torta."},
+   {t:"Aceptar y seguir.",ok:0,w:"Dejas de negociar justo cuando quedaban variables por mover."}]},
+  {c:"Te dieron despacho gratis. Ahora el proveedor te pide pagar a 15 días en vez de 30.",o:[
+   {t:"Aceptar, ya te dieron el despacho.",ok:0,w:"El despacho ya lo cerraste. Esta es una concesión nueva y merece algo a cambio."},
+   {t:"“Si te pago a 15, ¿me congelas el precio por tres meses?”",ok:1,w:"Si yo te doy, tú me das. Conviertes su pedido en moneda de cambio."},
+   {t:"Negarte.",ok:0,w:"Pierdes una moneda de cambio que a ti te cuesta poco."}]},
+  {c:"¿Cómo conviene ordenar la negociación con un proveedor nuevo de fierro?",o:[
+   {t:"Primero cerrar precio, después plazo, después despacho.",ok:0,w:"Punto por punto no deja espacio para intercambiar."},
+   {t:"Poner todas las variables sobre la mesa y negociar el paquete.",ok:1,w:"Así puedes ceder en lo barato para ti y ganar en lo que te importa."},
+   {t:"Partir por lo más fácil y dejar el precio para el final.",ok:0,w:"Igual estás negociando punto por punto."}]}
+ ]},
+{id:"m6",n:6,title:"Tiempo y compromiso",sub:"Urgencia, ultimátums y manos atadas",
+ lesson:[
+  {k:"La idea",h:"El tiempo es poder",b:`<p>El que tiene menos urgencia aguanta más, y el que aguanta más suele ganar. Por eso <strong>nunca negocies con stock crítico</strong>.</p><p>Tu herramienta de reposición es un arma estratégica: te avisa con tiempo y te deja negociar sin apuro.</p>`},
+  {k:"Herramienta",h:"El juego de la gallina",b:`<p>Dos autos van de frente: el que se desvía pierde; si ninguno se desvía, chocan. En negociación pasa con los ultimátums de ambos lados: nadie cede y se rompe todo.</p><div class="ex">La salida: darle al otro una forma digna de ceder. Por ejemplo, un alza escalonada en vez de un sí o no.</div>`},
+  {k:"Herramienta",h:"Atarse las manos",b:`<p>Un compromiso hace creíble tu posición porque te quita opciones. La forma más útil: la <strong>autoridad limitada</strong>.</p><div class="ex">“Elba me autorizó hasta 3%. Sobre eso tendría que llevarlo a la dueña, y no te puedo asegurar nada.”</div><p>Ojo: te quita flexibilidad. Úsalo cuando estés seguro de tu tope.</p>`},
+  {k:"Ejemplo",h:"La compra de cemento de urgencia",b:`<p>Se acabó el cemento un viernes. Resultado: flete express, precio sin descuento y cero poder.</p><div class="ex">Con tres semanas de anticipación, la misma compra se negocia con dos cotizaciones y tú pones el plazo.</div>`},
+  {k:"Error típico y regla",h:"Pon tú el plazo",b:`<p>El error: revelar tu fecha límite real o aceptar la presión de “la oferta vence hoy”.</p><p class="rule">Pon tú el plazo: “Necesito respuesta el jueves para cerrar el pedido del mes”.</p>`}
+ ],
+ summary:["Menos urgencia, más poder: nunca negocies con stock crítico.","Ante ultimátums cruzados, ofrece una salida digna.","La autoridad limitada hace creíble tu tope.","Pon tú el plazo y no reveles tu fecha límite real."],
+ mission:"Revisa tu última compra urgente: ¿cuánto pagaste de más en precio y flete? Anota ese número; es lo que te cuesta la falta de tiempo.",
+ qs:[
+  {c:"El proveedor te dice: “Esta oferta vence hoy”. Tienes stock para cuatro semanas.",o:[
+   {t:"Cerrar hoy para no perderla.",ok:0,w:"Tienes tiempo. Aceptar la presión es regalar tu ventaja."},
+   {t:"Pedir unos días y contrastar con tu alternativa.",ok:1,w:"Correcto. Sin urgencia, el plazo artificial pierde fuerza."},
+   {t:"Cortar la conversación por presionar.",ok:0,w:"No necesitas romper: basta con no aceptar el plazo."}]},
+  {c:"Tú y el proveedor se tiran ultimátums: él no baja de +8%, tú no subes de +2%.",o:[
+   {t:"Mantener tu ultimátum hasta que ceda.",ok:0,w:"Juego de la gallina: lo más probable es el choque."},
+   {t:"Proponer una salida digna: alza escalonada de +3% hoy y revisión en tres meses.",ok:1,w:"Le das una forma de ceder sin perder la cara, y tú mantienes el control."},
+   {t:"Aceptar el +8%.",ok:0,w:"Cedes todo el terreno."}]},
+  {c:"El proveedor insiste en +6%. Tu tope real es +3%. ¿Cómo lo haces creíble?",o:[
+   {t:"“Más de 3% no puedo, en serio.”",ok:0,w:"Suena a táctica, no a límite real."},
+   {t:"“Tengo autorización hasta 3%. Sobre eso lo tengo que llevar a la dueña y no te aseguro nada.”",ok:1,w:"Autoridad limitada: tu tope pasa a ser una regla, no una opinión."},
+   {t:"“Lo veo y te aviso.”",ok:0,w:"Deja la puerta abierta a que siga subiendo."}]}
+ ]},
+{id:"m7",n:7,title:"El método integral",sub:"Los seis conceptos juntos en casos reales",
+ lesson:[
+  {k:"Todo junto",h:"Las seis preguntas del negociador",b:`<ul><li><strong>Tablero:</strong> ¿qué gana, qué teme y qué hará el otro?</li><li><strong>Plan B:</strong> ¿cuál es mi alternativa y mi precio de reserva?</li><li><strong>Repetición:</strong> ¿es estratégico o transaccional?</li><li><strong>Información:</strong> ¿qué muestro, qué guardo, cuál es mi ancla?</li><li><strong>Torta:</strong> ¿qué variables puedo intercambiar además del precio?</li><li><strong>Tiempo:</strong> ¿quién tiene más urgencia? ¿quién pone el plazo?</li></ul>`},
+  {k:"Cómo usarlo",h:"Diez minutos antes de cada llamada",b:`<div class="ex">Aserradero, alza de 9%.<br>Tablero: quiere asegurar volumen en temporada baja. Plan B: cotización +6%, reserva +5%. Estratégico: sí. Ancla: mercado subió 5%, propongo +2%. Torta: pedido programado + pago a 15 días. Tiempo: tengo tres semanas de stock; respuesta el jueves.</div><p>Con eso escrito, entras a la llamada sabiendo qué jugar.</p>`},
+  {k:"Después",h:"Revisa la jugada",b:`<ul><li>¿Cerré dentro de mi precio de reserva?</li><li>¿Cedí algo sin pedir nada a cambio?</li><li>¿Qué aprendí del otro para la próxima ronda?</li></ul><p class="rule">Negociar es un músculo: se entrena todos los días.</p>`}
+ ],
+ summary:["Seis preguntas antes de cada negociación.","Diez minutos de preparación cambian el resultado.","Revisar después es lo que te hace mejorar ronda a ronda."],
+ mission:"Usa las seis preguntas en una negociación real esta semana. Escribe tus respuestas antes de la llamada y revisa después.",
+ qs:[
+  {c:"Tu aserradero estratégico anuncia +9% por alza de trozos. El mercado subió 5%. Tienes cotización a +6% con despacho más lento y stock para tres semanas.",o:[
+   {t:"Aceptar el +9% para cuidar la relación.",ok:0,w:"La relación no exige pagar 4 puntos sobre el mercado. Tienes plan B y tiempo."},
+   {t:"Re-anclar con el dato de mercado y ofrecer paquete (pedido programado + pago a 15 días) por un alza de 3% o menos.",ok:1,w:"Integras ancla, torta, plan B y tiempo, cuidando la relación estratégica."},
+   {t:"Cambiarte a la cotización de +6%.",ok:0,w:"Rompes un juego repetido valioso sin haber negociado."}]},
+  {c:"Un importador nuevo necesita liquidar cerámica antes de fin de mes. Es compra única y tú tienes poco espacio en bodega.",o:[
+   {t:"Pagar lista para asegurar la partida.",ok:0,w:"La urgencia es de él, no tuya. No hay relación futura que cuidar."},
+   {t:"Anclar bajo, comprar solo lo que cabe y poner tú un plazo corto.",ok:1,w:"Juego de una vez + urgencia del otro: aprovechas tiempo, ancla y tu límite real de espacio."},
+   {t:"Proponerle un contrato anual.",ok:0,w:"Él busca liquidar, no relación; y tú no tienes espacio."}]},
+  {c:"El distribuidor de cemento sabe que eres su mayor cliente en Rancagua, pero tú dependes de él porque es el único con despacho rápido.",o:[
+   {t:"Amenazar con irte si no baja precio.",ok:0,w:"Amenaza no creíble: hoy no tienes alternativa real."},
+   {t:"Proponer un acuerdo de largo plazo con compromisos mutuos, mientras desarrollas una segunda opción.",ok:1,w:"Reconoces la dependencia mutua, cooperas en el juego repetido y mejoras tu plan B para la próxima ronda."},
+   {t:"Aceptar lo que pida, total dependes de él.",ok:0,w:"Él también depende de ti. Tienes más poder del que usas."}]},
+  {c:"Después de cerrar un trato te das cuenta de que cediste plazo de pago sin pedir nada.",o:[
+   {t:"Llamar y retractarte.",ok:0,w:"Daña la confianza en un juego repetido."},
+   {t:"Anotarlo en la revisión y, en la próxima ronda, pedir algo concreto usando ese historial.",ok:1,w:"Aprendes de la jugada y conviertes lo cedido en argumento para la siguiente negociación."},
+   {t:"Olvidarlo, ya pasó.",ok:0,w:"Sin revisión, repetirás el error."}]}
+ ]}
+];
+
+/* ============ ESTADO ============ */
+const SECS = 45, KEY = "gimnasio-negociador-v1", DOC = "progreso/arturo";
+const blank = () => ({v:1, mods:{}, days:[], last:null, pts:0, hist:[]});
+let S = blank(), tts = null, syncMsg = "Tu avance se guarda en este teléfono";
+const dayKey = d => { const x = new Date(d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"); };
+const today = () => dayKey(Date.now());
+function loadLocal(){ try{ const r = localStorage.getItem(KEY); if(r) S = Object.assign(blank(), JSON.parse(r)); }catch(e){} }
+function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function save(){ saveLocal(); }
+function streak(){
+  const set = new Set(S.days); let n = 0; const d = new Date();
+  if(!set.has(dayKey(d))) d.setDate(d.getDate()-1);
+  while(set.has(dayKey(d))){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+function daysAway(){
+  if(!S.last) return null;
+  const a = new Date(dayKey(S.last)+"T00:00"), b = new Date(today()+"T00:00");
+  return Math.round((b-a)/864e5);
+}
+const unlocked = i => i===0 || !!(S.mods[MODS[i-1].id]||{}).passed;
+const passedCount = () => MODS.filter(m => (S.mods[m.id]||{}).passed).length;
+
+/* ============ VISTAS ============ */
+const app = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let view = {name:"home"}, timerId = null;
+
+function renderSync(){ const el = document.getElementById("sync"); if(el) el.textContent = syncMsg; }
+
+function home(){
+  stopTimer(); stopSpeak();
+  const st = streak(), away = daysAway(), doneToday = S.days.includes(today());
+  let alert = "";
+  if(away === null) alert = `<div class="alert"><strong>Arturo, hoy partimos.</strong><p>Una sesión al día: aprendes un concepto, lo practicas con casos de Pavez Economat y te llevas una misión para el mundo real. Tu cita es a las 20:00.</p></div>`;
+  else if(away >= 2) alert = `<div class="alert hot"><strong>Oye Arturo, llevas ${away} días sin entrenar. ¿Qué pasa?</strong><p>La racha se cortó. Una sesión corta hoy y vuelves al ritmo. Si un concepto se te está trabando, empieza por un repaso rápido.</p></div>`;
+  else if(!doneToday) alert = `<div class="alert"><strong>Hoy todavía no entrenas.</strong><p>Te falta la sesión del día para mantener la racha de ${st} ${st===1?"día":"días"}. Son diez minutos.</p></div>`;
+  else alert = `<div class="alert" style="border-color:var(--ok);background:var(--ok-bg)"><strong>Sesión de hoy lista.</strong><p>Mañana a las 20:00 sigue. Si quieres más, haz un repaso rápido.</p></div>`;
+
+  const wk = []; const d = new Date(); d.setDate(d.getDate()-6);
+  const L = ["D","L","M","M","J","V","S"];
+  for(let i=0;i<7;i++){ const k = dayKey(d); wk.push(`<div class="day"><span class="dot ${S.days.includes(k)?"done":""} ${k===today()?"today":""}">${S.days.includes(k)?"✓":""}</span>${L[d.getDay()]}</div>`); d.setDate(d.getDate()+1); }
+
+  let nextIdx = MODS.findIndex((m,i) => unlocked(i) && !(S.mods[m.id]||{}).passed);
+  const list = MODS.map((m,i) => {
+    const r = S.mods[m.id]||{}, un = unlocked(i), nx = i===nextIdx;
+    const cls = r.passed ? "passed" : nx ? "next" : un ? "" : "locked";
+    const tag = r.passed ? `<span class="tag">${r.best} pts</span>` : un ? `<span class="tag">${nx?"Siguiente →":"Abierto"}</span>` : `<span class="tag">🔒</span>`;
+    const meta = r.passed ? `Aprobado · ${r.acc}% aciertos · ${r.avg}s promedio` : m.sub;
+    return `<button class="mod ${cls}" data-mod="${i}" ${un?"":"disabled aria-disabled=\"true\""}><span class="n">${m.n}</span><span><h3>${esc(m.title)}</h3><span class="meta">${esc(meta)}</span></span>${tag}</button>`;
+  }).join("");
+
+  app.innerHTML = `
+  <div class="top"><div><div class="eyebrow">Pavez Economat · Abastecimiento</div><h1>Gimnasio del Negociador</h1></div></div>
+  <div class="stats">
+    <div class="stat fire"><span class="eyebrow">Racha</span><span class="num">${st}🔥</span></div>
+    <div class="stat"><span class="eyebrow">Puntos</span><span class="num">${S.pts}</span></div>
+    <div class="stat"><span class="eyebrow">Módulos</span><span class="num">${passedCount()}/${MODS.length}</span></div>
+  </div>
+  ${alert}
+  <div class="week" aria-label="Últimos 7 días">${wk.join("")}</div>
+  ${nextIdx>=0 ? `<button class="btn go" data-mod="${nextIdx}">Entrenar hoy: ${esc(MODS[nextIdx].title)}</button>` : `<button class="btn go" id="rep">Desafío del día: repaso mixto</button>`}
+  ${passedCount()>0 && nextIdx>=0 ? `<button class="btn alt" id="rep">Repaso rápido (3 casos)</button>` : ""}
+  <div class="eyebrow">El curso</div>
+  <div class="mods">${list}</div>
+  <p class="small">Cómo funciona: cada módulo te enseña un concepto en tarjetas cortas, luego lo practicas en 3 casos con ${SECS} segundos cada uno. Ganas 100 puntos por acierto más un bono por rapidez de hasta 50. Apruebas con 2 de 3 y se abre el siguiente.</p>
+  <div class="tools">
+    <button class="btn go" id="install" ${installEvt?"":"hidden"}>📲 Instalar en el teléfono</button>
+    <div class="eyebrow">Respaldo de tu avance</div>
+    <div class="row"><button class="btn alt" id="bk">Guardar respaldo</button><button class="btn alt" id="rs">Restaurar</button></div>
+    <p class="small">Tu avance vive en este teléfono. Antes de cambiar de celular o borrar datos de Chrome, guarda un respaldo.</p>
+  </div>
+  <p class="sync" id="sync">${esc(syncMsg)}</p>`;
+  document.getElementById("bk").onclick = backup;
+  document.getElementById("rs").onclick = () => document.getElementById("restore").click();
+  const ib = document.getElementById("install"); if(ib) ib.onclick = doInstall;
+  app.querySelectorAll("[data-mod]").forEach(b => b.onclick = () => { if(b.disabled) return; view = {name:"lesson", i:+b.dataset.mod, c:0}; render(); });
+  const rb = document.getElementById("rep"); if(rb) rb.onclick = startReview;
+}
+
+function lesson(){
+  stopTimer();
+  const m = MODS[view.i], c = m.lesson[view.c], last = view.c === m.lesson.length-1;
+  app.innerHTML = `
+  <div class="row" style="align-items:center"><button class="btn alt" id="back" style="flex:0 0 auto;width:auto;padding:8px 14px">← Inicio</button><div class="eyebrow" style="text-align:right">Módulo ${m.n} · Aprende · ${view.c+1}/${m.lesson.length}</div></div>
+  <div class="bar"><i style="width:${(view.c+1)/m.lesson.length*100}%"></i></div>
+  <h2>${esc(m.title)}</h2>
+  <div class="card">
+    <span class="kicker">${esc(c.k)}</span>
+    <h3>${esc(c.h)}</h3>
+    ${c.b}
+    ${tts ? `<button class="speak" id="spk">🔊 Escuchar</button>` : ""}
+  </div>
+  <div class="row">
+    <button class="btn alt" id="prev" ${view.c===0?"disabled":""}>Anterior</button>
+    <button class="btn ${last?"go":""}" id="next">${last?"A practicar →":"Siguiente"}</button>
+  </div>`;
+  document.getElementById("back").onclick = () => { view = {name:"home"}; render(); };
+  document.getElementById("prev").onclick = () => { stopSpeak(); view.c--; render(); };
+  document.getElementById("next").onclick = () => { stopSpeak(); if(last){ startQuiz(view.i); } else { view.c++; render(); } };
+  const sp = document.getElementById("spk");
+  if(sp) sp.onclick = () => {
+    if(sp.classList.contains("on")){ stopSpeak(); return; }
+    const tmp = document.createElement("div"); tmp.innerHTML = c.b;
+    const text = (c.h + ". " + tmp.textContent).replace(/\s+/g," ").slice(0,1900);
+    sp.classList.add("on"); sp.textContent = "⏹ Detener";
+    tts.speak(text).catch(()=>{}).finally(() => { sp.classList.remove("on"); sp.textContent = "🔊 Escuchar"; });
+  };
+}
+function stopSpeak(){ try{ tts && tts.stop(); }catch(e){} }
+
+function startQuiz(i){
+  const m = MODS[i];
+  view = {name:"quiz", i, qs:m.qs.map((q,qi)=>({...q, mi:i, qi})), k:0, ans:[], review:false};
+  render();
+}
+function startReview(){
+  const pool = [];
+  MODS.forEach((m,i) => { if((S.mods[m.id]||{}).passed) m.qs.forEach((q,qi) => pool.push({...q, mi:i, qi})); });
+  if(!pool.length) return;
+  for(let i=pool.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [pool[i],pool[j]] = [pool[j],pool[i]]; }
+  view = {name:"quiz", i:-1, qs:pool.slice(0,3), k:0, ans:[], review:true};
+  render();
+}
+function stopTimer(){ if(timerId){ clearInterval(timerId); timerId = null; } }
+
+function quiz(){
+  stopTimer();
+  const q = view.qs[view.k], label = view.review ? "Repaso rápido" : `Módulo ${MODS[view.i].n} · Practica`;
+  const order = q.o.map((o,idx)=>idx);
+  if(!q._ord){ for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; } q._ord = order; }
+  app.innerHTML = `
+  <div class="row" style="align-items:center"><button class="btn alt" id="back" style="flex:0 0 auto;width:auto;padding:8px 14px">← Salir</button><div class="eyebrow" style="text-align:right">${label} · Caso ${view.k+1}/${view.qs.length}</div></div>
+  <div class="timer"><div class="bar" id="tb"><i id="ti" style="width:100%"></i></div><span class="num" id="tt">${SECS}s</span></div>
+  <div class="card">
+    ${view.review ? `<span class="kicker">${esc(MODS[q.mi].title)}</span>` : ""}
+    <p class="case">${esc(q.c)}</p>
+  </div>
+  <div class="opts" id="opts">${q._ord.map((oi,n)=>`<button class="opt" data-o="${oi}"><b>${"ABC"[n]}</b><span>${esc(q.o[oi].t)}</span></button>`).join("")}</div>
+  <div id="fbx"></div>`;
+  document.getElementById("back").onclick = () => { view = {name:"home"}; render(); };
+  const t0 = Date.now(); let left = SECS;
+  timerId = setInterval(() => {
+    left = SECS - Math.floor((Date.now()-t0)/1000);
+    const ti = document.getElementById("ti"), tt = document.getElementById("tt"), tb = document.getElementById("tb");
+    if(!ti){ stopTimer(); return; }
+    ti.style.width = Math.max(0,left/SECS*100)+"%"; tt.textContent = Math.max(0,left)+"s";
+    if(left<=10) tb.classList.add("low");
+    if(left<=0) answer(-1, SECS);
+  }, 250);
+  app.querySelectorAll(".opt").forEach(b => b.onclick = () => answer(+b.dataset.o, Math.min(SECS,(Date.now()-t0)/1000)));
+}
+
+function answer(oi, secs){
+  stopTimer();
+  const q = view.qs[view.k], ok = oi>=0 && !!q.o[oi].ok;
+  const bonus = ok ? Math.round(50*Math.max(0,1-secs/SECS)) : 0, pts = ok ? 100+bonus : 0;
+  view.ans.push({ok, secs:Math.round(secs*10)/10, pts, mi:q.mi, qi:q.qi});
+  app.querySelectorAll(".opt").forEach(b => {
+    const i = +b.dataset.o; b.disabled = true;
+    if(q.o[i].ok) b.classList.add("right"); else if(i===oi) b.classList.add("wrong");
+    b.insertAdjacentHTML("beforeend", `<span class="why">${esc(q.o[i].w)}</span>`);
+  });
+  const ti = document.getElementById("ti"); if(ti) ti.style.transition = "none";
+  const last = view.k === view.qs.length-1;
+  const right = q.o.find(o=>o.ok);
+  document.getElementById("fbx").innerHTML = `
+  <div class="fb ${ok?"ok":"no"}">
+    <h3>${oi<0 ? "Se acabó el tiempo" : ok ? "¡Bien jugado!" : "Esta no era"}</h3>
+    <p>${esc(right.w)}</p>
+    <span class="pts">${ok ? `+100 acierto · +${bonus} rapidez (${Math.round(secs)}s)` : "0 puntos"}</span>
+  </div>
+  <button class="btn ${last?"go":""}" id="nx" style="margin-top:12px">${last?"Ver resultado":"Siguiente caso"}</button>`;
+  document.getElementById("nx").onclick = () => { if(last) finish(); else { view.k++; render(); } };
+  document.getElementById("fbx").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function finish(){
+  const a = view.ans, hits = a.filter(x=>x.ok).length, total = a.reduce((s,x)=>s+x.pts,0);
+  const acc = Math.round(hits/a.length*100), avg = Math.round(a.reduce((s,x)=>s+x.secs,0)/a.length);
+  const need = Math.ceil(a.length*2/3), passed = hits >= need;
+  const now = new Date().toISOString();
+  S.pts += total; S.last = now;
+  if(!S.days.includes(today())) S.days.push(today());
+  S.days = S.days.slice(-120);
+  a.forEach(x => S.hist.push({m:MODS[x.mi].id, q:x.qi, ok:x.ok?1:0, s:x.secs, at:now}));
+  S.hist = S.hist.slice(-80);
+  let m = null;
+  if(!view.review){
+    m = MODS[view.i];
+    const r = S.mods[m.id] || {runs:0, best:0};
+    r.runs++; r.lastAt = now;
+    if(passed && (!r.passed || total > r.best)){ r.best = total; r.acc = acc; r.avg = avg; }
+    r.passed = r.passed || passed;
+    S.mods[m.id] = r;
+  }
+  save();
+  view = {name:"result", m, hits, n:a.length, total, acc, avg, passed, review:view.review, i:view.i};
+  render();
+}
+
+function result(){
+  const r = view, m = r.m;
+  const head = r.review ? "Repaso listo" : r.passed ? `Módulo ${m.n} aprobado` : "Casi. Vuelve a intentarlo";
+  app.innerHTML = `
+  <div class="eyebrow">${r.review ? "Repaso rápido" : "Módulo "+m.n+" · Resultado"}</div>
+  <h2>${head}</h2>
+  <div class="card" style="align-items:flex-start">
+    <span class="big num">${r.total}</span><span class="eyebrow">puntos</span>
+    <div class="stats" style="width:100%">
+      <div class="stat"><span class="eyebrow">Aciertos</span><span class="num">${r.hits}/${r.n}</span></div>
+      <div class="stat"><span class="eyebrow">Precisión</span><span class="num">${r.acc}%</span></div>
+      <div class="stat"><span class="eyebrow">Tiempo prom.</span><span class="num">${r.avg}s</span></div>
+    </div>
+    <p class="small">Racha: ${streak()} ${streak()===1?"día":"días"} seguidos. La sesión de hoy quedó registrada.</p>
+  </div>
+  ${m ? `<div class="card"><span class="kicker">Lo que aprendiste</span><ul>${m.summary.map(s=>`<li>${esc(s)}</li>`).join("")}</ul></div>
+  <div class="mission"><span class="eyebrow">Misión para el mundo real</span><p><strong>${esc(m.mission)}</strong></p><p class="small">La teoría se queda cuando la usas con un proveedor de verdad.</p></div>` : ""}
+  ${m && !r.passed ? `<button class="btn" id="relesson">Repasar la lección</button><button class="btn go" id="retry">Reintentar los casos</button>` : ""}
+  <button class="btn ${m && !r.passed ? "alt" : "go"}" id="home">Volver al inicio</button>
+  <p class="sync" id="sync">${esc(syncMsg)}</p>`;
+  document.getElementById("home").onclick = () => { view = {name:"home"}; render(); };
+  const rl = document.getElementById("relesson"); if(rl) rl.onclick = () => { view = {name:"lesson", i:r.i, c:0}; render(); };
+  const rt = document.getElementById("retry"); if(rt) rt.onclick = () => startQuiz(r.i);
+}
+
+function render(){
+  ({home, lesson, quiz, result})[view.name]();
+  window.scrollTo(0,0);
+}
+
+/* ============ VOZ (lectura en voz alta del teléfono) ============ */
+if("speechSynthesis" in window){
+  const pickVoice = () => { const v = speechSynthesis.getVoices(); return v.find(x=>/es[-_]CL/i.test(x.lang)) || v.find(x=>/es[-_](US|419|MX)/i.test(x.lang)) || v.find(x=>/^es/i.test(x.lang)) || null; };
+  tts = {
+    speak(text){ return new Promise((res, rej) => {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text); u.lang = "es-CL"; u.rate = 1.02;
+      const v = pickVoice(); if(v) u.voice = v;
+      u.onend = () => res(); u.onerror = e => rej(e);
+      speechSynthesis.speak(u);
+    }); },
+    stop(){ speechSynthesis.cancel(); }
+  };
+}
+
+/* ============ RESPALDO ============ */
+function backup(){
+  const blob = new Blob([JSON.stringify(S, null, 1)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "gimnasio-negociador-respaldo-" + today() + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  syncMsg = "Respaldo descargado"; renderSync();
+}
+document.getElementById("restore").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const d = JSON.parse(r.result);
+      if(!d || d.v !== 1 || !Array.isArray(d.days)) throw new Error("formato");
+      S = Object.assign(blank(), d); saveLocal(); syncMsg = "Respaldo restaurado"; view = {name:"home"}; render();
+    }catch(err){ syncMsg = "Ese archivo no es un respaldo del Gimnasio del Negociador"; renderSync(); }
+    e.target.value = "";
+  };
+  r.readAsText(f);
+});
+
+/* ============ INSTALACIÓN COMO APP ============ */
+let installEvt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; if(view.name==="home") render(); });
+window.addEventListener("appinstalled", () => { installEvt = null; if(view.name==="home") render(); });
+async function doInstall(){ if(!installEvt) return; installEvt.prompt(); try{ await installEvt.userChoice; }catch(e){} installEvt = null; render(); }
+if("serviceWorker" in navigator && location.protocol !== "file:"){
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+}
+
+/* ============ ARRANQUE ============ */
+loadLocal(); render();
+document.addEventListener("visibilitychange", () => { if(document.visibilityState==="visible" && view.name==="home") render(); });
+</script>
+</body>
+</html>
